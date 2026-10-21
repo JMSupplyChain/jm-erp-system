@@ -4,11 +4,6 @@ import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
-// Inicializar cliente seguro de Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,13 +16,18 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg("");
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      setErrorMsg("Error de configuración: Faltan las llaves de Supabase en Vercel.");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.trim() === "" || supabaseAnonKey.trim() === "") {
+      setErrorMsg("Faltan las credenciales de Supabase en Vercel. Verifica las Variables de Entorno.");
       setLoading(false);
       return;
     }
 
     try {
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
