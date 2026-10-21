@@ -16,20 +16,34 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg("");
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-    if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.trim() === "" || supabaseAnonKey.trim() === "") {
-      setErrorMsg("Faltan las credenciales de Supabase en Vercel. Verifica las Variables de Entorno.");
+    if (!rawUrl || !rawKey) {
+      setErrorMsg("Faltan las variables en Vercel.");
       setLoading(false);
       return;
     }
 
     try {
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
-      
+      // Limpiar automáticamente la URL para dejar solo https://tu-proyecto.supabase.co
+      const parsedUrl = new URL(rawUrl.trim());
+      const cleanSupabaseUrl = parsedUrl.origin; // Elimina cualquier ruta extra después de .co
+      const cleanAnonKey = rawKey.trim();
+
+      // Verificación por si se copió el link del dashboard por error
+      if (cleanSupabaseUrl.includes("supabase.com")) {
+        setErrorMsg(
+          `En Vercel pusiste el link de la página (${rawUrl}). Debes poner el que termina en .supabase.co que tienes en tu archivo .env.local`
+        );
+        setLoading(false);
+        return;
+      }
+
+      const supabase = createClient(cleanSupabaseUrl, cleanAnonKey);
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -38,7 +52,9 @@ export default function LoginPage() {
       router.push("/");
       router.refresh();
     } catch (err: any) {
-      setErrorMsg(err.message || "Correo o contraseña incorrectos.");
+      setErrorMsg(
+        `${err.message || "Error al ingresar"} (URL leída: ${rawUrl})`
+      );
     } finally {
       setLoading(false);
     }
@@ -54,7 +70,7 @@ export default function LoginPage() {
         </div>
 
         {errorMsg && (
-          <div className="mb-4 rounded-md bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-400 text-center">
+          <div className="mb-4 rounded-md bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-400 text-center break-words">
             {errorMsg}
           </div>
         )}
